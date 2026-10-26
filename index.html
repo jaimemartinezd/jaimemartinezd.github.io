@@ -117,6 +117,7 @@
       --surface: #11173A;     /* bloques elevados */
       --surface-2: #171F4A;
       --line: #27305F;        /* bordes y conectores */
+      --line-strong: #5A66A0; /* borde de controles interactivos (≥3:1 sobre el fondo) */
       --text: #E7EAF6;
       --muted: #A1A9CC;
       --blue: #4C8DFF;
@@ -133,6 +134,7 @@
       --surface: #FFFFFF;
       --surface-2: #EDF0FA;
       --line: #D3D9EE;
+      --line-strong: #7F88AD;
       --text: #0F1533;
       --muted: #4A5378;
       --blue: #1F5FE0;
@@ -218,7 +220,7 @@
       display: inline-grid; place-items: center;
       min-width: 2.75rem; height: 2.75rem; padding: 0 .6rem;  /* 44px: área táctil cómoda */
       background: transparent; color: var(--text);
-      border: 1px solid var(--line); border-radius: var(--radius-s);
+      border: 1px solid var(--line-strong); border-radius: var(--radius-s);
       font: 500 .875rem/1 var(--font-mono); cursor: pointer;
       transition: background-color .15s ease, border-color .15s ease;
     }
@@ -237,21 +239,51 @@
     .main-nav {
       position: absolute; left: 0; right: 0; top: var(--header-h);
       background: var(--bg); border-bottom: 1px solid var(--line);
-      padding: .5rem var(--gutter) 1rem;
-      display: none;
+      box-shadow: 0 24px 40px -24px rgba(0, 0, 0, .5);
+      padding: .25rem var(--gutter) .75rem;
+      /* Cerrado pero animable. visibility:hidden impide que los enlaces reciban foco */
+      visibility: hidden; opacity: 0; transform: translateY(-.5rem);
+      transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s;
     }
-    .main-nav.is-open { display: block; }
-    .main-nav a { padding: .8rem 0; border-bottom: 1px solid var(--line); }
+    .main-nav.is-open {
+      visibility: visible; opacity: 1; transform: none;
+      transition: opacity .2s ease, transform .2s ease, visibility 0s;
+    }
+    .main-nav a {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: .9rem 0; border-bottom: 1px solid var(--line); font-size: 1.05rem;
+    }
     .main-nav li:last-child a { border-bottom: 0; }
+    /* Sección actual en móvil: texto en azul y punto con el degradado de la marca */
+    .main-nav a[aria-current="true"] { color: var(--blue); }
+    .main-nav a::after {
+      content: ""; width: 8px; height: 8px; border-radius: 50%;
+      background: linear-gradient(140deg, var(--blue), var(--violet)); opacity: 0;
+    }
+    .main-nav a[aria-current="true"]::after { opacity: 1; }
+    /* Icono hamburguesa / cerrar según el estado */
+    .menu-btn[aria-expanded="true"] .icon-menu,
+    .menu-btn[aria-expanded="false"] .icon-close { display: none; }
 
     @media (min-width: 860px) {
       .menu-btn { display: none; }
       .main-nav {
-        position: static; display: block; background: none; border: 0; padding: 0; margin-right: .75rem;
+        position: static; background: none; border: 0; padding: 0; margin-right: .75rem; box-shadow: none;
+        visibility: visible; opacity: 1; transform: none; transition: none;
       }
       .main-nav ul { display: flex; gap: 1.4rem; }
-      .main-nav a { padding: .25rem 0; border: 0; font-size: .95rem; color: var(--muted); }
+      .main-nav a {
+        position: relative; display: block; padding: .25rem 0; border: 0;
+        font-size: .95rem; color: var(--muted); transition: color .15s ease;
+      }
       .main-nav a:hover, .main-nav a[aria-current="true"] { color: var(--text); }
+      /* Sección actual en escritorio: línea inferior con el degradado de la marca */
+      .main-nav a::after {
+        position: absolute; left: 0; right: 0; bottom: -.3rem;
+        width: auto; height: 2px; border-radius: 2px; opacity: 1;
+        transform: scaleX(0); transform-origin: left; transition: transform .25s ease;
+      }
+      .main-nav a[aria-current="true"]::after { transform: scaleX(1); }
     }
 
     /* ==========================================================
@@ -341,7 +373,7 @@
     .btn:active { transform: translateY(1px); }
     .btn-primary { background: var(--blue); color: var(--on-accent); }
     .btn-primary:hover { background: color-mix(in srgb, var(--blue) 85%, var(--text)); }
-    .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
+    .btn-ghost { background: transparent; color: var(--text); border-color: var(--line-strong); }
     .btn-ghost:hover { border-color: var(--muted); background: var(--surface); }
 
     /* ----- Pipeline ETL -----
@@ -475,10 +507,25 @@
     /* ----- Proyectos ----- */
     .projects { display: grid; gap: 1.25rem; }
     .project {
+      position: relative;
       padding: 1.4rem;
       background: var(--surface);
       border: 1px solid var(--line);
       border-radius: var(--radius-m);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+    /* Tarjetas con enlace: toda la tarjeta es clicable (área táctil grande en móvil).
+       Solo estas reaccionan al cursor; las que no enlazan a nada se quedan quietas. */
+    .project--link .project-link::after { content: ""; position: absolute; inset: 0; border-radius: inherit; }
+    .project--link:hover {
+      border-color: color-mix(in srgb, var(--blue) 60%, var(--line));
+      box-shadow: 0 22px 45px -30px color-mix(in srgb, var(--blue) 80%, transparent);
+    }
+    .project--link:hover .project-link { text-decoration-thickness: 2px; }
+    @supports selector(:has(*)) {
+      /* El foco de teclado se dibuja alrededor de toda la tarjeta */
+      .project--link:has(.project-link:focus-visible) { outline: 3px solid var(--violet); outline-offset: 3px; }
+      .project--link .project-link:focus-visible { outline: none; }
     }
     .project h3 { font-size: 1.3rem; }
     .project-context { color: var(--muted); font-size: .95rem; margin-top: .25rem; }
@@ -486,7 +533,7 @@
     .project ul.bullets { margin-top: .75rem; padding-left: 1.1rem; color: var(--text); }
     .project ul.bullets li { margin-top: .3rem; }
     .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, max-content)); gap: 1rem 2rem; margin-top: 1.1rem; }
-    .metric strong { display: block; font: 500 1.65rem/1.1 var(--font-mono); color: var(--blue); }
+    .metric strong { display: block; font: 500 1.65rem/1.1 var(--font-mono); color: var(--blue); font-variant-numeric: tabular-nums; }
     .metric span { color: var(--muted); font-size: .9rem; }
     .tags { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1.1rem; list-style: none; }
     .tags li {
@@ -520,14 +567,25 @@
       content: ""; position: absolute; left: 7px; top: .5rem; bottom: .5rem;
       width: 2px; background: var(--line);
     }
-    .tl-item { position: relative; padding: 0 0 2.25rem 2.25rem; }
+    /* Trazo de progreso: se rellena al hacer scroll (JS). Sin JS se ve completo. */
+    .timeline::after {
+      content: ""; position: absolute; left: 7px; top: .5rem; bottom: .5rem; width: 2px;
+      background: linear-gradient(180deg, var(--blue), var(--violet));
+      transform: scaleY(var(--tl-progress, 1)); transform-origin: top;
+    }
+    .js .timeline::after { transform: scaleY(var(--tl-progress, 0)); }
+    .tl-item { position: relative; z-index: 1; padding: 0 0 2.25rem 2.25rem; }
     .tl-item:last-child { padding-bottom: 0; }
     .tl-item::before {
       content: ""; position: absolute; left: 0; top: .35rem;
       width: 16px; height: 16px; border-radius: 4px;
       background: var(--bg); border: 2px solid var(--blue);
     }
+    .tl-item::before { transition: box-shadow .3s ease; }
     .tl-item--edu::before { border-color: var(--violet); border-radius: 50%; }
+    /* Hito alcanzado por el trazo: halo suave */
+    .tl-item.is-passed::before { box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 25%, transparent); }
+    .tl-item--edu.is-passed::before { box-shadow: 0 0 0 4px color-mix(in srgb, var(--violet) 25%, transparent); }
     .tl-item--now::before { background: var(--blue); }
     .tl-date { font: 500 .88rem/1.3 var(--font-mono); color: var(--muted); }
     .tl-item h3 { font-size: 1.2rem; margin-top: .3rem; }
@@ -588,7 +646,7 @@
       html { scroll-behavior: auto; }
       .js .reveal { opacity: 1; transform: none; transition: none; }
       .pkt { animation: none; opacity: 0; }
-      * { transition-duration: 0s !important; }
+      * { transition-duration: 0s !important; transition-delay: 0s !important; }
     }
   </style>
 </head>
@@ -626,7 +684,8 @@
 
       <!-- Botón de menú (solo móvil) -->
       <button class="icon-btn menu-btn" id="menu-btn" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú" data-i18n-attr="aria-label:menuOpen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="icon-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
       </button>
     </div>
   </header>
@@ -770,8 +829,8 @@
             </div>
           </article>
 
-          <!-- Proyecto ML con repositorio -->
-          <article class="project reveal">
+          <!-- Proyecto ML con repositorio (project--link: tarjeta clicable entera) -->
+          <article class="project project--link reveal">
             <h3 data-i18n="p2.title">Detección de tumores cerebrales con CNN</h3>
             <p class="project-context" data-i18n="p2.context">Proyecto personal de machine learning</p>
             <p class="project-desc" data-i18n="p2.desc">Pipeline de clasificación de resonancias magnéticas en 4 clases con transfer learning sobre EfficientNetB0: preprocesado, aumento de datos, entrenamiento y evaluación.</p>
@@ -1155,10 +1214,14 @@
       /* ---------- MENÚ MÓVIL ---------- */
       var menuBtn = document.getElementById('menu-btn');
       var nav = document.getElementById('main-nav');
+      var desktopMQ = window.matchMedia('(min-width: 860px)');
       function setMenu(open) {
         nav.classList.toggle('is-open', open);
         menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         updateMenuLabel();
+        // Al abrir, el foco pasa al primer enlace: el menú va antes del botón en el
+        // HTML y, si no, con Tab se saltaría directamente al contenido.
+        if (open) { var first = nav.querySelector('a'); if (first) first.focus(); }
       }
       function updateMenuLabel() {
         var t = I18N[currentLang];
@@ -1169,6 +1232,18 @@
         setMenu(menuBtn.getAttribute('aria-expanded') !== 'true');
       });
       nav.addEventListener('click', function (e) { if (e.target.closest('a')) setMenu(false); });
+      function isMenuOpen() { return menuBtn.getAttribute('aria-expanded') === 'true'; }
+      // Cerrar al tocar fuera del menú
+      document.addEventListener('click', function (e) {
+        if (isMenuOpen() && !nav.contains(e.target) && !menuBtn.contains(e.target)) setMenu(false);
+      });
+      // Cerrar si el foco sale de la cabecera (navegación con Tab)
+      document.querySelector('.site-header').addEventListener('focusout', function (e) {
+        if (isMenuOpen() && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setMenu(false);
+      });
+      // Cerrar al pasar a escritorio (giro de pantalla, ventana más ancha)
+      var onMQ = function (e) { if (e.matches && isMenuOpen()) setMenu(false); };
+      if (desktopMQ.addEventListener) desktopMQ.addEventListener('change', onMQ); else desktopMQ.addListener(onMQ);
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && menuBtn.getAttribute('aria-expanded') === 'true') { setMenu(false); menuBtn.focus(); }
       });
@@ -1191,7 +1266,8 @@
             }
           });
         }, { rootMargin: '-45% 0px -50% 0px' });
-        document.querySelectorAll('main section[id]').forEach(function (s) { secObs.observe(s); });
+        // Se observa también el hero (sin id): al volver arriba no queda ningún enlace marcado
+        document.querySelectorAll('main > section').forEach(function (s) { secObs.observe(s); });
       }
 
       /* ---------- Animación sutil al aparecer en pantalla ---------- */
@@ -1206,6 +1282,68 @@
         reveals.forEach(function (el) { obs.observe(el); });
       } else {
         reveals.forEach(function (el) { el.classList.add('is-in'); });
+      }
+
+      /* ---------- Línea de tiempo que se dibuja con el scroll ----------
+         Solo escucha el scroll mientras la sección está cerca de la pantalla y
+         solo cambia transform (no provoca recálculos de maquetación). */
+      var tl = document.querySelector('.timeline');
+      if (tl) {
+        var tlItems = Array.prototype.slice.call(tl.querySelectorAll('.tl-item'));
+        var setAllPassed = function () {
+          tl.style.setProperty('--tl-progress', '1');
+          tlItems.forEach(function (li) { li.classList.add('is-passed'); });
+        };
+        if (reduce || !('IntersectionObserver' in window)) {
+          setAllPassed();
+        } else {
+          var tlTicking = false;
+          var drawTimeline = function () {
+            tlTicking = false;
+            var mark = window.innerHeight * 0.65;               // "cabezal" a 2/3 de pantalla
+            var r = tl.getBoundingClientRect();
+            var tops = tlItems.map(function (li) { return li.getBoundingClientRect().top; });
+            var p = Math.max(0, Math.min(1, (mark - r.top) / r.height));
+            tl.style.setProperty('--tl-progress', p.toFixed(3));
+            tlItems.forEach(function (li, i) { li.classList.toggle('is-passed', tops[i] + 12 < mark); });
+          };
+          var onTlScroll = function () { if (!tlTicking) { tlTicking = true; requestAnimationFrame(drawTimeline); } };
+          new IntersectionObserver(function (entries) {
+            if (entries[0].isIntersecting) window.addEventListener('scroll', onTlScroll, { passive: true });
+            else window.removeEventListener('scroll', onTlScroll);
+            drawTimeline();
+          }, { rootMargin: '200px 0px' }).observe(tl);
+        }
+      }
+
+      /* ---------- Cifras de proyectos que cuentan al aparecer ----------
+         Una sola vez, ~0,9 s. Al terminar se restaura el texto exacto (y su idioma). */
+      function countUp(el) {
+        var raw = el.textContent.trim();
+        var m = raw.match(/^(\d+)(?:([.,])(\d+))?(.*)$/);
+        if (!m) return;
+        var target = parseFloat(m[1] + (m[3] ? '.' + m[3] : ''));
+        var dec = m[3] ? m[3].length : 0, sep = m[2] || '', suffix = m[4];
+        var key = el.getAttribute('data-i18n');
+        el.style.minWidth = raw.length + 'ch';                // reserva el ancho final: sin saltos
+        var t0 = null;
+        function frame(ts) {
+          if (t0 === null) t0 = ts;
+          var t = Math.min(1, (ts - t0) / 900);
+          var v = (target * (1 - Math.pow(1 - t, 3))).toFixed(dec);
+          el.textContent = (sep ? v.replace('.', sep) : v) + suffix;
+          if (t < 1) requestAnimationFrame(frame);
+          else el.textContent = key ? I18N[currentLang][key] : raw;
+        }
+        requestAnimationFrame(frame);
+      }
+      if (!reduce && 'IntersectionObserver' in window) {
+        var numObs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting) { countUp(en.target); numObs.unobserve(en.target); }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        document.querySelectorAll('.metric strong').forEach(function (el) { numObs.observe(el); });
       }
 
       /* ---------- Copiar email ---------- */
