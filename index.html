@@ -655,7 +655,7 @@
   <a class="skip-link" href="#contenido" data-i18n="skip">Saltar al contenido</a>
 
   <!-- ================= CABECERA ================= -->
-  <header class="site-header" id="top">
+  <header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="#top" aria-label="Jaime Martínez Domínguez, inicio" data-i18n-attr="aria-label:brandLabel">
         <span class="brand-mark" aria-hidden="true"><i></i><b></b><i></i></span>
@@ -1246,6 +1246,17 @@
       if (desktopMQ.addEventListener) desktopMQ.addEventListener('change', onMQ); else desktopMQ.addListener(onMQ);
       document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape' && menuBtn.getAttribute('aria-expanded') === 'true') { setMenu(false); menuBtn.focus(); }
+      });
+
+      /* ---------- Volver arriba al pulsar el nombre ----------
+         Sube siempre al principio (suave salvo con movimiento reducido), cierra el
+         menú móvil si está abierto y no deja "#top" en la URL. */
+      document.querySelector('.brand').addEventListener('click', function (e) {
+        e.preventDefault();
+        if (isMenuOpen()) setMenu(false);
+        var smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+        if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
       });
 
       /* ---------- Borde de cabecera al hacer scroll ---------- */
